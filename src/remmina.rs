@@ -39,7 +39,10 @@ impl Entry {
 
     /// Text searched besides the name: group, server and username.
     fn details(&self) -> String {
-        format!("{}/{} {} {}", self.group, self.name, self.server, self.username)
+        format!(
+            "{}/{} {} {}",
+            self.group, self.name, self.server, self.username
+        )
     }
 }
 
