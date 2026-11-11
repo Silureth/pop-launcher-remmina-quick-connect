@@ -1,0 +1,13 @@
+(
+    name: "Remmina quick connect",
+    description: "Open a saved Remmina connection\nSyntax: rem <search>",
+    bin: (path: "remmina-quick-connect"),
+    icon: Name("org.remmina.Remmina"),
+    query: (
+        regex: "^rem( |$)",
+        help: "rem",
+        isolate: true,
+        no_sort: true,
+        history: false
+    ),
+)

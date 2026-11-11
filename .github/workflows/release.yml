@@ -1,0 +1,64 @@
+name: Release
+
+# Push a tag like v1.0.0 (matching the version in Cargo.toml) to publish a release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            target: x86_64-unknown-linux-musl
+            runner: ubuntu-latest
+          - arch: aarch64
+            target: aarch64-unknown-linux-musl
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check tag matches Cargo.toml version
+        run: |
+          version=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match Cargo.toml version $version" >&2
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Static musl binary, so it runs regardless of the system's glibc version.
+      - run: cargo build --release --locked --target ${{ matrix.target }}
+
+      - name: Package
+        run: |
+          dir=remmina-quick-connect
+          mkdir "$dir"
+          cp target/${{ matrix.target }}/release/remmina-quick-connect "$dir/"
+          cp config.example.json plugin.ron LICENSE README.md "$dir/"
+          tar -czf remmina-quick-connect-${{ matrix.arch }}.tar.gz "$dir"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: remmina-quick-connect-${{ matrix.arch }}
+          path: remmina-quick-connect-${{ matrix.arch }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: remmina-quick-connect-*.tar.gz
+          generate_release_notes: true
